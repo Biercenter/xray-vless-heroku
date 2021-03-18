@@ -1,49 +1,44 @@
 #!/bin/sh
 
-# Download and install ngweb
-mkdir /tmp/ngweb
-curl -L -H "Cache-Control: no-cache" -o /tmp/ngweb/ngweb.zip https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-64.zip
-unzip /tmp/ngweb/ngweb.zip -d /tmp/ngweb
-base64 > /tmp/ngweb/config << EOF
+# Download and install V2Ray
+mkdir /tmp/v2ray
+curl -L -H "Cache-Control: no-cache" -o /tmp/v2ray/v2ray.zip https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-64.zip
+unzip /tmp/v2ray/v2ray.zip -d /tmp/v2ray
+install -m 755 /tmp/v2ray/v2ray /usr/local/bin/v2ray
+install -m 755 /tmp/v2ray/v2ctl /usr/local/bin/v2ctl
+
+# Remove temporary directory
+rm -rf /tmp/v2ray
+
+# V2Ray new configuration
+install -d /usr/local/etc/v2ray
+cat << EOF > /usr/local/etc/v2ray/config.json
 {
-    "log": {
-        "access": "none"
-    }, 
     "inbounds": [
         {
-            "port": $PORT, 
-            "protocol": "vless", 
+            "port": $PORT,
+            "protocol": "vmess",
             "settings": {
-                "decryption": "none", 
                 "clients": [
                     {
-                        "id": "$UUID"
+                        "id": "$UUID",
+                        "alterId": 64
                     }
-                ]
-            }, 
+                ],
+                "disableInsecureEncryption": true
+            },
             "streamSettings": {
-                "network": "ws", 
-                "wsSettings": {
-                    "path": "/4za406jj"
-                }
+                "network": "ws"
             }
         }
-    ], 
+    ],
     "outbounds": [
         {
-            "protocol": "freedom", 
-            "settings": { }
+            "protocol": "freedom"
         }
     ]
 }
 EOF
 
-base64 -d /tmp/ngweb/config | /tmp/ngweb/v2ctl config stdin: | base64 > /tmp/ngweb/ngweb.config
-install -m 755 /tmp/ngweb/v2ray /usr/local/bin/ngweb
-install -m 644 /tmp/ngweb/ngweb.config /usr/local/bin/ngweb.config
-
-# Remove temporary directory
-rm -rf /tmp/ngweb
-
 # Run V2Ray
-base64 -d /usr/local/bin/ngweb.config | /usr/local/bin/ngweb -format=pb -c=stdin:
+/usr/local/bin/v2ray -config /usr/local/etc/v2ray/config.json
